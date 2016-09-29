@@ -21,42 +21,41 @@
 
 #include <i2c.h>
 
-#define BUFFER_LENGTH   32
-
+#define BUFFER_LENGTH	32
 
 class TwoWire {
 
 public:
 	TwoWire(int devID);
 	void begin();
-	void begin(int);
 	void setClock(int speed);
-	void beginTransmission(uint8_t);
-	void beginTransmission(int);
+	void beginTransmission(uint8_t addr);
+	void beginTransmission(int addr);
+	uint8_t endTransmission(uint8_t sendStop);
 	uint8_t endTransmission(void);
-	uint8_t endTransmission(uint8_t);
-	uint8_t requestFrom(uint8_t, uint8_t);
-	uint8_t requestFrom(uint8_t, uint8_t, uint8_t);
-	uint8_t requestFrom(int, int);
-	uint8_t requestFrom(int, int, int);
-	virtual size_t write(uint8_t);
-	virtual size_t write(const uint8_t *, size_t);
+
+	uint8_t requestFrom(uint8_t addr, uint8_t quantity, uint8_t sendStop);
+	uint8_t requestFrom(uint8_t addr, uint8_t quantity);
+	uint8_t requestFrom(int addr, int quantity, int sendStop);
+	uint8_t requestFrom(int addr, int quantity);
+	
+	virtual size_t write(uint8_t data);
+	virtual size_t write(const uint8_t *data, size_t length);
 	virtual int available(void);
 	virtual int read(void);
 	virtual int peek(void);
 	virtual void flush(void);
 
 private:
-	// RX Buffer
-	uint8_t rxBuffer[BUFFER_LENGTH];
-	uint8_t rxBufferIndex;
-	uint8_t rxBufferLength;
+	//Buffers
+	uint8_t rxBuff[BUFFER_LENGTH];
+	uint8_t rxBuffIndex;
+	uint8_t rxBuffLength;
+	uint8_t txBuff[BUFFER_LENGTH];
+	uint8_t txBuffLength;
 
-	// TX Buffer
 	uint8_t txAddress;
-	uint8_t txBuffer[BUFFER_LENGTH];
-	uint8_t txBufferLength;
-
+	
 	uint8_t dev_id;
 	struct device *i2c_dev;
 	union dev_config cfg;

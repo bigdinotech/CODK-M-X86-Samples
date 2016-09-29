@@ -32,7 +32,6 @@
 #define PRINT           printk
 #endif
 
-
 TwoWire::TwoWire(int devID)
 {
 	dev_id = devID;
@@ -86,27 +85,27 @@ void TwoWire::setClock(int speed)
 	}
 }
 
-void TwoWire::beginTransmission(uint8_t address)
+void TwoWire::beginTransmission(uint8_t addr)
 {
 	if (init_status < 0)
 		return;
 	// set slave address
-	i2c_setslave(address);
+	i2c_setslave(addr);
 	// reset transmit buffer
-	txBufferLength = 0;
+	txBuffLength = 0;
 }
 
-void TwoWire::beginTransmission(int address)
+void TwoWire::beginTransmission(int addr)
 {
-	beginTransmission((uint8_t) address);
+	beginTransmission((uint8_t) addr);
 }
 
 uint8_t TwoWire::endTransmission(uint8_t sendStop)
 {
 	int err;
 		// transmit buffer (blocking)
-	if (txBufferLength >= 1) {
-		err = i2c_writebytes(txBuffer, txBufferLength, !sendStop);
+	if (txBuffLength >= 1) {
+		err = i2c_writebytes(txBuff, txBuffLength, !sendStop);
 	} else {
 		uint8_t temp = 0;
 		// Workaround: I2C bus scan is currently implemented by reading,
@@ -114,7 +113,7 @@ uint8_t TwoWire::endTransmission(uint8_t sendStop)
 		err = i2c_readbytes(&temp, 0, 0);
 	}
 	// empty buffer
-	txBufferLength = 0;
+	txBuffLength = 0;
 	if (err < 0) {
 		return -err;
 	}
@@ -126,81 +125,87 @@ uint8_t TwoWire::endTransmission(void)
 	return endTransmission(true);
 }
 
-size_t TwoWire::write(uint8_t data)
+uint8_t TwoWire::requestFrom(uint8_t addr, uint8_t quantity, uint8_t sendStop)
 {
-	if (txBufferLength >= BUFFER_LENGTH)
-		return 0;
-	txBuffer[txBufferLength++] = data;
-	return 1;
-}
-
-size_t TwoWire::write(const uint8_t *data, size_t quantity)
-{
-	for (size_t i = 0; i < quantity; ++i) {
-		if (txBufferLength >= BUFFER_LENGTH)
-			return i;
-		txBuffer[txBufferLength++] = data[i];
-	}
-	return quantity;
-}
-
-uint8_t TwoWire::requestFrom(uint8_t address, uint8_t quantity, uint8_t sendStop)
-{
-	int ret;
 	if (quantity > BUFFER_LENGTH)
 		quantity = BUFFER_LENGTH;
 
-	/* Set slave address via ioctl  */
-	i2c_setslave(address);
-	ret = i2c_readbytes(rxBuffer, quantity, !sendStop);
+	i2c_setslave(addr);
+	int ret = i2c_readbytes(rxBuff, quantity, !sendStop);
 	if (ret < 0) {
 		return 0;
 	}
-	// set rx buffer iterator vars
-	rxBufferIndex = 0;
-	rxBufferLength = quantity;
+
+	// set rx buffer index back to 0
+	rxBuffIndex = 0;
+	rxBuffLength = quantity;
 
 	return quantity;
 }
 
-uint8_t TwoWire::requestFrom(uint8_t address, uint8_t quantity)
+uint8_t TwoWire::requestFrom(uint8_t addr, uint8_t quantity)
 {
-	return requestFrom((uint8_t) address, (uint8_t) quantity, (uint8_t) true);
+	return requestFrom((uint8_t)addr, (uint8_t)quantity, (uint8_t)true);
 }
 
-uint8_t TwoWire::requestFrom(int address, int quantity)
+uint8_t TwoWire::requestFrom(int addr, int quantity, int sendStop)
 {
-	return requestFrom((uint8_t) address, (uint8_t) quantity, (uint8_t) true);
+	return requestFrom((uint8_t)addr, (uint8_t)quantity, (uint8_t)sendStop);
 }
 
-uint8_t TwoWire::requestFrom(int address, int quantity, int sendStop)
+uint8_t TwoWire::requestFrom(int addr, int quantity)
 {
-	return requestFrom((uint8_t) address, (uint8_t) quantity, (uint8_t) sendStop);
+	return requestFrom((uint8_t)addr, (uint8_t)quantity, (uint8_t)true);
+}
+
+size_t TwoWire::write(uint8_t data)
+{
+	if (txBuffLength >= BUFFER_LENGTH)
+	{
+		return 0;
+	}
+	txBuff[txBuffLength++] = data;
+	return 1;
+}
+
+size_t TwoWire::write(const uint8_t *data, uint8_t length)
+{
+	for (uint8_t i = 0; i < length; i++) {
+		if (txBuffLength >= BUFFER_LENGTH)
+		{
+			return i;
+		}
+		txBuff[txBuffLength++] = data[i];
+	}
+	return length;
 }
 
 int TwoWire::available(void)
 {
-	return rxBufferLength - rxBufferIndex;
+	return rxBuffLength - rxBuffIndex;
 }
 
 int TwoWire::read(void)
 {
-	if (rxBufferIndex < rxBufferLength)
-		return rxBuffer[rxBufferIndex++];
+	if (rxBuffIndex < rxBuffLength)
+	{
+		return rxBuff[rxBuffIndex++];
+	}
 	return -1;
 }
 
 int TwoWire::peek(void)
 {
-	if (rxBufferIndex < rxBufferLength)
-		return rxBuffer[rxBufferIndex];
+	if (rxBuffIndex < rxBuffLength)
+	{
+		return rxBuff[rxBuffIndex];
+	}
 	return -1;
 }
 
 void TwoWire::flush(void)
 {
-	// Do nothing, use endTransmission(..) to force
-	// data transfer.
+	//do nothing
 }
 
 void TwoWire::i2c_setslave(uint8_t addr)
@@ -249,8 +254,6 @@ int TwoWire::i2c_readbytes(uint8_t *buf, int length, bool no_stop)
 
 	return i2c_transfer(i2c_dev, &msgs[0], 1, txAddress);
 }
-
-// Preinstantiate Objects //////////////////////////////////////////////////////
 
 TwoWire I2C0 = TwoWire(0);
 TwoWire I2C1 = TwoWire(1);
